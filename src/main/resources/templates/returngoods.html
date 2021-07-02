@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh_CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>药品退货管理</title>
+    <link rel="stylesheet" th:href="@{/static/layui/css/layui.css}" media="all">
+    <link rel="stylesheet" th:href="@{/static/admin/style.css}" media="all">
+    <script type="text/html" id="indexTpl">
+    {{d.LAY_TABLE_INDEX+1}}
+</script>
+</head>
+<body class="layui-layout-body">
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space5">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">药品退货列表</div>
+                    <div class="layui-card-body">
+                        <table class="layui-hide" id="main-table" lay-filter="main-table"></table>
+                       <script type="text/html" id="toolberDome">
+                            <span class="layui-inline" lay-event="add"><i class="layui-icon">&#xe654;</i></span>
+                           <span class="layui-inline" style="width: 240px">
+                               <input class="layui-input" name="param" id="param" placeholder="根据药品名称查询" autocomplete="off">
+                           </span>
+                               <span class="layui-btn layui-btn-sm layui-bg-red" lay-event="querySearch">
+                                   <i class="layui-icon">&#xe615;</i> 查询
+                               </span>
+                           </span>
+                        </script>
+                        <script type="text/html" id="barDemo">
+                           <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+                            <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/static/layui/layui.js}"></script>
+    <script>
+        layui.use(['table','form'],function () {
+            var $ = layui.$;
+            var table = layui.table;
+            //得到后端结果
+            table.render({
+                elem: '#main-table',
+                height: 650,
+                url: '/returngoods/returnQueryPage',
+                method: 'POST',
+                page: true,
+                id: 'table-load',
+                toolbar:'#toolberDome',
+                cols: [
+                    [
+                     {title: '序号',field:'id', template: '#indexTpl', width: 80, align: 'center'},
+                     {field: 'dname', title: '药品名称', align: "center"},
+                     {field: 'count', title: '数量', align: "center"},
+                     {field: 'reason', title: '退货原因', align: "center"},
+                     {field: 'total', title: '总金额', align: "center"},
+                     {field: 'returntime', title: '退货时间',align: 'center', width: 200},
+                     {title: '操作', align:'center',toolbar:'#barDemo',fixed:'right'}
+                    ]
+                ]
+            });
+
+            //监听头工具栏事件
+            table.on('toolbar(main-table)',function (obj) {
+                switch (obj.event) {
+                    case 'add':
+                        layer.open({
+                           type: 2,
+                            title:'新增药品信息',
+                            content:'returngoods/returngoodsPage',
+                            shade:[0.8,'#393d49'],
+                            area:['600px','510px'],
+                            btn:['确定','取消'],
+                            yes:function(index,layero){
+
+                               var iframeWindow = window['layui-layer-iframe'+index];
+                               var submit = layero.find('iframe').contents().find("#LAY-front-submit");
+                               //监听提交
+                                iframeWindow.layui.form.on('submit(LAY-front-submit)',function (data) {
+                                    var field =  data.field;
+                                    $.ajax({
+                                        url: '/returngoods/returngoodsAdd',
+                                        data: field,
+                                        async:false,
+                                        cache:false,
+                                        success:function (str) {
+                                            if(str.code===0){
+                                                table.reload('table-load');  //成功后刷新页面
+                                            }
+                                            layer.msg(str.msg,{icon:str.icon,anim:str.anim});
+                                        }
+                                    });
+                                    layer.close(index);  //关闭当前的弹窗
+                                });
+                                submit.trigger('click');  //点击事件生效
+                            },
+                            success:function (layero,index) {
+
+                            }
+                        });
+                        break;
+                    case 'querySearch':
+                        var param = $('#param').val();
+                        table.reload('table-load',{
+                            where:{
+                                param: param
+                            }
+                        });
+                        $('#param').val(param);  //搜索完成后，输入的搜索字体还在所搜框中
+                        break;
+                }
+            });
+            //监听编辑和删除
+            table.on('tool(main-table)',function (obj) {
+                var data = obj.data;
+                switch (obj.event) {
+                    case 'edit':
+                        layer.open({
+                            type: 2,
+                            title: '编辑药品信息',
+                            content: '/returngoods/returngoodsQueryById?id=' + data.id,
+                            shade: [0.8, '#393d49'],
+                            area: ['600px', '400px'],
+                            btn: ['确定', '取消'],
+                            yes: function (index, layero) {
+
+                                var iframeWindow = window['layui-layer-iframe' + index];
+                                var submit = layero.find('iframe').contents().find("#LAY-front-submit");
+                                //监听提交
+                                iframeWindow.layui.form.on('submit(LAY-front-submit)', function (data) {
+                                    var field = data.field;
+                                    $.ajax({
+                                        url: '/returngoods/returngoodsEdit',
+                                        data: field,
+                                        async: false,
+                                        cache: false,
+                                        success: function (str) {
+                                            if (str.code === 0) {
+                                                table.reload('table-load');  //成功后刷新页面
+                                            }
+                                            layer.msg(str.msg, {icon: str.icon, anim: str.anim});
+                                        }
+                                    });
+                                    layer.close(index);  //关闭当前的弹窗
+                                });
+                                submit.trigger('click');  //点击事件生效
+                            },
+                            success: function (layero, index) {
+
+                            }
+                        });
+                        break;
+                    case 'del':
+                        layer.confirm('确定要删除吗？', function (index) {
+                            $.ajax({
+                                url: '/returngoods/returngoodsDelById?id=' + data.id,
+                                data: null,
+                                async: false,
+                                cache: false,
+                                success: function (str) {
+                                    table.reload('table-load');  //成功后刷新页面
+                                    layer.msg(str.msg, {icon: str.icon, anim: str.anim});
+
+                                }
+                            });
+                        });
+                        break;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
